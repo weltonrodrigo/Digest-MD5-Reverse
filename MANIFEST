@@ -1,0 +1,7 @@
+Makefile.PL
+MANIFEST
+README
+INSTALL
+lib/Digest/MD5/Reverse.pm
+t/1-reverse.t
+META.yml                                 Module meta-data (added by MakeMaker)

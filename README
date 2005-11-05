@@ -1,0 +1,16 @@
+MD5 sums (see RFC 1321 - The MD5 Message-Digest Algorithm) are used as a one-way
+hash of data. Due to the nature of the formula used, it is impossible to reverse
+it.
+
+This module provides functions to search several online MD5 hashes database and
+return the results (or return undefined if no match found).
+
+We are not breaking security. We are however making it easier to lookup the
+source of a MD5 sum.
+
+Digest::MD5::Reverse Written by William Chan (money1109@gmail.com).
+http://md5.crysm.net/ Database project by Stephen D Cope.
+http://www.schwett.com/md5/ Database project by Canacas.
+
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
