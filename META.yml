@@ -1,10 +1,19 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         Digest-MD5-Reverse
-version:      1.0
-version_from: lib/Digest/MD5/Reverse.pm
-installdirs:  site
-requires:
-
-distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.17
+---
+name: Digest-MD5-Reverse
+version: 1.1
+author:
+  - 'Raoul-Gabriel Urma <blwood@skynet.be>'
+abstract: MD5 Reverse Lookup
+license: perl
+build_requires:
+  Test::More: 0
+generated_by: Module::Build version 0.2808
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2
+provides:
+  Digest::MD5::Reverse:
+    file: lib/Digest/MD5/Reverse.pm
+    version: 1.1
+resources:
+  license: http://dev.perl.org/licenses/

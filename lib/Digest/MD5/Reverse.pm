@@ -2,174 +2,138 @@ package Digest::MD5::Reverse;
 use strict;
 use Exporter;
 use vars qw($VERSION @ISA @EXPORTER @EXPORT_OK $DATABASE);
-use IO::Socket;
+use Socket;
 
-$VERSION = '1.0';
 
-@EXPORT_OK = qw(r_md5 r_md5_hex r_md5_base64);
-@ISA = ('Exporter');
+our $VERSION = "1.1";
+@EXPORT_OK = qw(reverse_md5);
+@ISA= qw(Exporter);
 
 $DATABASE = [
+	{
+		host => "milw0rm.com",
+		path => "/cracker/search.php",
+		meth => "POST",
+		content => "hash=%value%&Submit=Submit",
+		mreg => qr{
+		<TR\sclass="submit">
+                <TD\salign="middle"\snowrap="nowrap"\swidth=90>md5<\/TD>
+                <TD\salign="middle"\snowrap="nowrap"\swidth=250>\w{32}<\/TD>
+                <TD\salign="middle"\snowrap="nowrap"\swidth=90>(.+?)<\/TD>
+                <TD\salign="middle"\snowrap="nowrap"\swidth=90>cracked<\/TD>
+		<\/TR>
+                }x
+	}, 
+	{
+		host => "hashreverse.com",
+		path => "/index.php?action=view",
+		meth => "POST",
+		content => "hash=%value%&Submit2=Search+for+a+SHA1+or+MD5+hash",
+		mreg => qr{
+		<li>(.+?)<\/li>
+                  }x
+	},
+	{
+		host => "us.md5.crysm.net",
+		path => "/find?md5=%value%",
+		meth => "GET",
+		mreg => qr{
+		<li>(.+?)<\/li>
+                  }x        
+	},
+	{
+		host => "nz.md5.crysm.net",
+		path => "/find?md5=%value%",
+		meth => "GET",
+		mreg => qr{
+		<li>(.+?)<\/li>
+                  }x        
+	},
+	{
+		host => "ice.breaker.free.fr",
+		path => "/md5.php?hash=%value%",
+		meth => "GET",
+		mreg => qr{
+		<br>\s-\s(.+?)<br>
+                  }x        
+	},
     {
-        url => 'http://us.md5.crysm.net/find?md5=%value%',
-        rev => '<li>(.+?)</li>',
-        nmv => ''
-    },
-    {
-        url => 'http://nz.md5.crysm.net/find?md5=%value%',
-        rev => '<li>(.+?)</li>',
-        nmv => ''
-    },
-    {
-        url => 'http://www.schwett.com/md5/?md5value=%value%&md5c=Hash+Match',
-        rev => '<h3>(.+?)</h3>',
-        nmv => 'No Match Found'
-    }
+        host => "hashchecker.com",
+        path => "/index.php",
+        meth => "POST",
+        content => "search_field=%value%&Submit=search",
+        mreg => qr{
+		<b>(.+?)<\/b>\sused\scharlist
+                  }x        
+    } 
 ];
 
-sub _encode_hex ($) {
-    return unpack 'H*', shift;
+sub new 
+{
+	my ($class, $md5) = @_;
+	my $this = {};
+	bless($this, $class);
+	$this->{MD5} = $md5;
+	return $this;
 }
 
-sub _decode_base64 ($) {
-    my $str = shift;
-
-    $str =~ tr|A-Za-z0-9+=/||cd;
-    $str =~ s/=+$//;
-    $str =~ tr|A-Za-z0-9+/| -_|;
-
-    my $uustr = '';
-    my ($i, $l);
-
-    $l = length($str) - 60;
-    for ($i = 0; $i <= $l; $i += 60) {
-        $uustr .= "M" . substr($str, $i, 60);
-    }
-
-    unless ($str eq '') {
-        $uustr .= chr(32 + length($str)*3/4) . $str;
-    }
-
-    return unpack 'u', $uustr;
+sub reverse 
+{
+	my $this = shift;
+	return _reverse($this->{MD5});
 }
 
-# Functional interface:
-
-sub r_md5 ($) {
-    my $md5_hex = _encode_hex shift;
-    return &r_md5_hex($md5_hex);
-}
-
-sub r_md5_hex ($) {
-    return &_reverse(shift());
-}
-
-sub r_md5_base64 ($) {
-    my $md5 = _decode_base64 shift;
-    return &r_md5($md5);
-}
-
-# OOP interface:
-
-sub new {
-    my $proto = shift;
-    my $class = ref $proto || $proto;
-    my $self = {};
-    bless $self, $class;
-    $self->reset();
-    return $self;
-}
-
-sub reset {
-    my $self = shift;
-    delete $self->{_data};
-    return $self;
-}
-
-sub add {
-	my $self = shift;
-    return unless @_;
-    $self->{_data} .= join '', @_;
-    return $self;
-}
-
-sub reverse {
-	my $self = shift;
-    my $md5_hex = _encode_hex $self->{_data};
-    return $self->hexreverse($md5_hex);
-}
-
-sub hexreverse {
-	my $self = shift;
-    return &_reverse($self->{_data});
-}
-
-sub b64reverse {
-	my $self = shift;
-    my $md5 = _decode_base64 $self->{_data};
-    return $self->reverse($md5);
-}
-
-sub clone {
-    my $self = shift;
-
-    my $clone = { _data => $self->{_data} };
-
-    bless $clone, ref $self || $self;
-}
-
-# Reverse
-
-sub _reverse {
-	my $code = shift;
-
-    my $string = '';
-
-    for my $this (@{ $DATABASE }) {
-        my $url = $this->{url};
-        my $rev = $this->{rev};
-        my $nmv = $this->{nmv};
-
-        $url =~ s!%value%!$code!ig;
-        my $page = &_getpage($url);
-        next unless $page;
-
-        if ($page =~ /$rev/) {
-            next if ($nmv && $1 =~ /$nmv/);
-            $string = $1;
-            last;
+sub _reverse 
+{
+	my $md5 = shift;	
+	my($string,$page);
+	SEARCH:
+	for my $site (@{ $DATABASE }) 
+	{
+		my $host = $site->{host};
+		my $path = $site->{path};
+		my $meth = $site->{meth};
+		my $mreg = $site->{mreg};        
+		my $content = $site->{content};
+        if($meth eq "POST")
+        {
+		$content =~ s/%value%/$md5/ig;
+		$page = _post($host,$path,$content);            
         }
-    }
-
-    return $string ? $string : undef;
+        else
+        {
+		$path =~ s/%value%/$md5/ig;
+		$page = _get($host,$path);            
+        }         
+	next unless $page;
+	last SEARCH if(($string) = $page =~ /$site->{mreg}/);
+	}
+	return $string ? $string : undef;
 }
 
-sub _getpage {
-	my $url = shift;
-
-    my $content = '';
-
-    my $port = 80 if ($url =~ s/^http:\/\///);
-    my $host = $1 if ($url =~ s/([^:\/]+)//);
-       $port = $1 if ($url =~ s/^:([\d]+)//);
-
-    my $sock = new IO::Socket::INET( PeerHost => $host, PeerPort => $port, Proto => 'tcp', Type => SOCK_STREAM, Timeout => 5 );
-
-    return undef unless $sock;
-
-    $sock->send("GET $url HTTP/1.0\r\n");
-    $sock->send("Host: $host\r\n");
-    $sock->send("Connection: close\r\n");
-    $sock->send("\r\n");
-    while ($sock->read(my $tmp, 1024, 0)) {
-        $content .= $tmp;
-    }
-    $sock->shutdown(5);
-    $sock->close();
-
-    return $content;
+sub reverse_md5
+{
+	return _reverse(shift);	
 }
 
+sub _get
+{
+	my($url,$path) = @_;
+	socket(my $socket, PF_INET, SOCK_STREAM, getprotobyname("tcp")) or die "Socket Error : $!\n";
+	connect($socket,sockaddr_in(80, inet_aton($url))) or die "Connect Error: $!\n";
+	send($socket,"GET $path HTTP/1.1\015\012Host: $url\015\012User-Agent: Firefox\015\012Connection: Close\015\012\015\012",0);
+	return do { local $/; <$socket> };
+}
+
+sub _post
+{
+	my($url,$path,$content) = @_;
+	my $len = length $content;
+	socket(my $socket, PF_INET, SOCK_STREAM, getprotobyname("tcp")) or die "Socket Error : $!\n";
+	connect($socket,sockaddr_in(80, inet_aton($url))) or die "Connect Error : $!\n";
+	send($socket,"POST $path HTTP/1.1\015\012Host: $url\015\012User-Agent: Firefox\015\012Content-Type: application/x-www-form-urlencoded\015\012Connection: Close\015\012Content-Length: $len\015\012\015\012$content\015\012",0);
+	return do { local $/; <$socket> };
+}
 1;
 
 __END__
@@ -180,20 +144,16 @@ Digest::MD5::Reverse - MD5 Reverse Lookup
 
 =head1 SYNOPSIS
 
- # Functional style
- use Digest::MD5::Reverse qw(r_md5 r_md5_hex r_md5_base64);
+# Functional style
+use Digest::MD5::Reverse qw(reverse_md5);
 
- $data = r_md5 $hash;
- $data = r_md5_hex $hash;
- $data = r_md5_base64 $hash;
+my $plaintext = r_md5 $hash;
 
  # OO style
  use Digest::MD5::Reverse;
 
- $ctx = Digest::MD5::Reverse->new;
-
- $ctx->add($hash);
- $data = $ctx->reverse;
+my $md5 = Digest::MD5::Reverse->new($hash);
+my $plaintext = $md5->reverse;
 
 =head1 DESCRIPTION
 
@@ -209,30 +169,28 @@ source of a MD5 sum.
 
 =head1 EXAMPLES
 
-The simplest way to use this library is to import the r_md5_hex()
-function (or one of its cousins):
+The simplest way to use this library is to import the reverse_md5() function :
 
-    use Digest::MD5::Reverse qw(r_md5_hex);
+    use Digest::MD5::Reverse qw(reverse_md5);
 
-    print 'Data is ' r_md5_hex('6df23dc03f9b54cc38a0fc1483df6e21') "\n";
+    print "Data is ".reverse_md5("6df23dc03f9b54cc38a0fc1483df6e21")."\n";
 
-The above example would print out the message
-
-    Data is foobarbaz
+    # Data is foobarbaz
+    
+    my @md5 = qw(acbd18db4cc2f85cedef654fccc4a4d8 37b51d194a7513e45b56f6524f2d51f2);
+    my @plaintext = map (reverse_md5($_), @md5);
+    print join " - ", @plaintext;
+    
+    # foo - bar 
 
 In OO style:
 
     use Digest::MD5::Reverse;
 
-    $reverse = Digest::MD5::Reverse->new;
-    $reverse->add('6df23dc03f9b54cc38a0fc1483df6e21');
-    $data = $reverse->hexreverse;
-
-    print "Data is $data\n";
-
-You also can make a copy with clone:
-
-	$reverse->clone->hexreverse
+    my $md5 = Digest::MD5::Reverse->new("6df23dc03f9b54cc38a0fc1483df6e21");
+    print "Data is ".$md5->reverse."\n";
+    
+    # Data is foobarbaz
 
 =head1 LIMITATIONS
 
@@ -243,19 +201,15 @@ all library search finished.
 
 L<Digest::MD5>
 
-=head1 AUTHORS
+=head1 AUTHOR
 
-Digest::MD5::Reverse Written by William Chan (money1109@gmail.com).
-http://md5.crysm.net/ Database project by Stephen D Cope.
-http://www.schwett.com/md5/ Database project by Canacas.
+Raoul-Gabriel Urma << blwood@skynet.be >>
 
-=head1 COPYRIGHT
+=head1 COPYRIGHT & LICENSE
 
-Copyright 2005 William Chan.
+Copyright 2007 Raoul-Gabriel Urma, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
-
-See L<http://www.perl.com/perl/misc/Artistic.html>
 
 =cut

@@ -1,7 +1,10 @@
-Makefile.PL
+Build.PL
+Changes
 MANIFEST
+META.yml # Will be created by "make dist"
 README
-INSTALL
 lib/Digest/MD5/Reverse.pm
-t/1-reverse.t
-META.yml                                 Module meta-data (added by MakeMaker)
+t/00-load.t
+t/boilerplate.t
+t/pod-coverage.t
+t/pod.t
