@@ -1,6 +1,6 @@
 ---
 name: Digest-MD5-Reverse
-version: 1.1
+version: 1.2
 author:
   - 'Raoul-Gabriel Urma <blwood@skynet.be>'
 abstract: MD5 Reverse Lookup
@@ -14,6 +14,6 @@ meta-spec:
 provides:
   Digest::MD5::Reverse:
     file: lib/Digest/MD5/Reverse.pm
-    version: 1.1
+    version: 1.2
 resources:
   license: http://dev.perl.org/licenses/

@@ -5,7 +5,7 @@ use vars qw($VERSION @ISA @EXPORTER @EXPORT_OK $DATABASE);
 use Socket;
 
 
-our $VERSION = "1.1";
+our $VERSION = "1.2";
 @EXPORT_OK = qw(reverse_md5);
 @ISA= qw(Exporter);
 
@@ -145,15 +145,16 @@ Digest::MD5::Reverse - MD5 Reverse Lookup
 =head1 SYNOPSIS
 
 # Functional style
-use Digest::MD5::Reverse qw(reverse_md5);
 
-my $plaintext = r_md5 $hash;
+    use Digest::MD5::Reverse qw(reverse_md5);
+
+    my $plaintext = reverse_md5 $hash;
 
  # OO style
- use Digest::MD5::Reverse;
+    use Digest::MD5::Reverse;
 
-my $md5 = Digest::MD5::Reverse->new($hash);
-my $plaintext = $md5->reverse;
+    my $md5 = Digest::MD5::Reverse->new($hash);
+    my $plaintext = $md5->reverse;
 
 =head1 DESCRIPTION
 

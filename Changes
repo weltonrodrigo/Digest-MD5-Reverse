@@ -1,5 +1,8 @@
 Revision history for Digest-MD5-Reverse
 
+1.2    23/6/2007
+		  - synopsis
+
 1.1    22/6/2007 
           - new code
           - reverse_md5 function
