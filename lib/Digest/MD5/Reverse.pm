@@ -1,15 +1,77 @@
 package Digest::MD5::Reverse;
+
+use warnings;
 use strict;
-use Exporter;
-use vars qw($VERSION @ISA @EXPORTER @EXPORT_OK $DATABASE);
 use Socket;
+use Exporter;
+
+=head1 NAME
+
+Digest::MD5::Reverse - MD5 Reverse Lookup
+
+=cut
+
+our $VERSION = "1.3";
+our @ISA = qw(Exporter);
+our @EXPORT = qw(&reverse_md5);
 
 
-our $VERSION = "1.2";
-@EXPORT_OK = qw(reverse_md5);
-@ISA= qw(Exporter);
+=head1 VERSION
 
-$DATABASE = [
+Version 1.3
+
+=head1 SYNOPSIS
+
+    use Digest::MD5::Reverse;
+    my $plaintext = reverse_md5($md5);    
+
+=head1 DESCRIPTION
+
+MD5 sums (see RFC 1321 - The MD5 Message-Digest Algorithm) are used as a one-way
+hash of data. Due to the nature of the formula used, it is impossible to reverse
+it.
+
+This module provides functions to search several online MD5 hashes database and
+return the results (or return undefined if no match found).
+
+We are not breaking security. We are however making it easier to lookup the
+source of a MD5 sum.
+
+=head1 EXAMPLES
+
+    use Digest::MD5::Reverse;
+    print "Data is ".reverse_md5("acbd18db4cc2f85cedef654fccc4a4d8")."\n";    
+    # Data is foo
+
+=head1 DATABASE
+
+=over 4
+
+=item * milw0rm.com
+
+=item * gdataonline.com
+
+=item * hashreverse.com
+
+=item * us.md5.crysm.net
+
+=item * nz.md5.crysm.net
+
+=item * ice.breaker.free.fr
+
+=item * hashchecker.com
+
+=item * md5.rednoize.com
+
+=item * md5.xpzone.de
+
+=item * md5encryption.com
+
+=back
+
+=cut
+
+our $DATABASE = [
 	{
 		host => "milw0rm.com",
 		path => "/cracker/search.php",
@@ -24,6 +86,14 @@ $DATABASE = [
 		<\/TR>
                 }x
 	}, 
+	{
+        host => "gdataonline.com",
+        path => "/qkhash.php?mode=xml&hash=%value%",
+        meth => "GET",
+        mreg => qr{
+		<result>(.+?)<\/result>
+                  }x
+    },
 	{
 		host => "hashreverse.com",
 		path => "/index.php?action=view",
@@ -65,27 +135,58 @@ $DATABASE = [
         mreg => qr{
 		<b>(.+?)<\/b>\sused\scharlist
                   }x        
-    } 
+    },
+    {
+        host => "md5.rednoize.com",
+        path => "/?s=md5&q=%value%",
+        meth => "GET",
+        mreg => qr{
+		<div\sid="result"\s>(.+?)<\/div>
+                  }x
+		
+	},
+	{
+        host => "md5.xpzone.de",
+        path => "/?string=%value%&mode=decrypt",
+        meth => "GET",
+        mreg => qr{
+		Code:\s<b>(.+?)</b><br>
+                  }x
+    },
+	{
+        host => "md5encryption.com",
+        path => "/?mod=decrypt",
+        meth => "POST",
+		content => "hash2word=%value%",
+        mreg => qr{
+		<b>Decrypted\sWord:<\/b>\s(.*?)(?:<br\s\/>){2}
+                  }x   
+    }
 ];
 
-sub new 
+my $get = sub
 {
-	my ($class, $md5) = @_;
-	my $this = {};
-	bless($this, $class);
-	$this->{MD5} = $md5;
-	return $this;
-}
+	my($url,$path) = @_;
+	socket(my $socket, PF_INET, SOCK_STREAM, getprotobyname("tcp")) or die "Socket Error : $!\n";
+	connect($socket,sockaddr_in(80, inet_aton($url))) or die "Connect Error: $!\n";
+	send($socket,"GET $path HTTP/1.1\015\012Host: $url\015\012User-Agent: Firefox\015\012Connection: Close\015\012\015\012",0);
+	return do { local $/; <$socket> };
+};
 
-sub reverse 
+my $post = sub
 {
-	my $this = shift;
-	return _reverse($this->{MD5});
-}
+	my($url,$path,$content) = @_;
+	my $len = length $content;
+	socket(my $socket, PF_INET, SOCK_STREAM, getprotobyname("tcp")) or die "Socket Error : $!\n";
+	connect($socket,sockaddr_in(80, inet_aton($url))) or die "Connect Error : $!\n";
+	send($socket,"POST $path HTTP/1.1\015\012Host: $url\015\012User-Agent: Firefox\015\012Content-Type: application/x-www-form-urlencoded\015\012Connection: Close\015\012Content-Length: $len\015\012\015\012$content\015\012",0);
+	return do { local $/; <$socket> };
+};
 
-sub _reverse 
+my $reverseit = sub  
 {
-	my $md5 = shift;	
+	my $md5 = shift;
+	return undef if length $md5 != 32;	
 	my($string,$page);
 	SEARCH:
 	for my $site (@{ $DATABASE }) 
@@ -98,105 +199,23 @@ sub _reverse
         if($meth eq "POST")
         {
 		$content =~ s/%value%/$md5/ig;
-		$page = _post($host,$path,$content);            
+		$page = $post->($host,$path,$content);            
         }
         else
         {
 		$path =~ s/%value%/$md5/ig;
-		$page = _get($host,$path);            
+		$page = $get->($host,$path);            
         }         
 	next unless $page;
 	last SEARCH if(($string) = $page =~ /$site->{mreg}/);
 	}
 	return $string ? $string : undef;
-}
+};
 
 sub reverse_md5
 {
-	return _reverse(shift);	
+	return $reverseit->(shift);	
 }
-
-sub _get
-{
-	my($url,$path) = @_;
-	socket(my $socket, PF_INET, SOCK_STREAM, getprotobyname("tcp")) or die "Socket Error : $!\n";
-	connect($socket,sockaddr_in(80, inet_aton($url))) or die "Connect Error: $!\n";
-	send($socket,"GET $path HTTP/1.1\015\012Host: $url\015\012User-Agent: Firefox\015\012Connection: Close\015\012\015\012",0);
-	return do { local $/; <$socket> };
-}
-
-sub _post
-{
-	my($url,$path,$content) = @_;
-	my $len = length $content;
-	socket(my $socket, PF_INET, SOCK_STREAM, getprotobyname("tcp")) or die "Socket Error : $!\n";
-	connect($socket,sockaddr_in(80, inet_aton($url))) or die "Connect Error : $!\n";
-	send($socket,"POST $path HTTP/1.1\015\012Host: $url\015\012User-Agent: Firefox\015\012Content-Type: application/x-www-form-urlencoded\015\012Connection: Close\015\012Content-Length: $len\015\012\015\012$content\015\012",0);
-	return do { local $/; <$socket> };
-}
-1;
-
-__END__
-
-=head1 NAME
-
-Digest::MD5::Reverse - MD5 Reverse Lookup
-
-=head1 SYNOPSIS
-
-# Functional style
-
-    use Digest::MD5::Reverse qw(reverse_md5);
-
-    my $plaintext = reverse_md5 $hash;
-
- # OO style
-    use Digest::MD5::Reverse;
-
-    my $md5 = Digest::MD5::Reverse->new($hash);
-    my $plaintext = $md5->reverse;
-
-=head1 DESCRIPTION
-
-MD5 sums (see RFC 1321 - The MD5 Message-Digest Algorithm) are used as a one-way
-hash of data. Due to the nature of the formula used, it is impossible to reverse
-it.
-
-This module provides functions to search several online MD5 hashes database and
-return the results (or return undefined if no match found).
-
-We are not breaking security. We are however making it easier to lookup the
-source of a MD5 sum.
-
-=head1 EXAMPLES
-
-The simplest way to use this library is to import the reverse_md5() function :
-
-    use Digest::MD5::Reverse qw(reverse_md5);
-
-    print "Data is ".reverse_md5("6df23dc03f9b54cc38a0fc1483df6e21")."\n";
-
-    # Data is foobarbaz
-    
-    my @md5 = qw(acbd18db4cc2f85cedef654fccc4a4d8 37b51d194a7513e45b56f6524f2d51f2);
-    my @plaintext = map (reverse_md5($_), @md5);
-    print join " - ", @plaintext;
-    
-    # foo - bar 
-
-In OO style:
-
-    use Digest::MD5::Reverse;
-
-    my $md5 = Digest::MD5::Reverse->new("6df23dc03f9b54cc38a0fc1483df6e21");
-    print "Data is ".$md5->reverse."\n";
-    
-    # Data is foobarbaz
-
-=head1 LIMITATIONS
-
-It is very slow, because it will search each library until match found or
-all library search finished.
 
 =head1 SEE ALSO
 
@@ -214,3 +233,5 @@ This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
 =cut
+
+1;

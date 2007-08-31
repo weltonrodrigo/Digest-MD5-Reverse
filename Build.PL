@@ -5,8 +5,8 @@ use Module::Build;
 my $builder = Module::Build->new(
     module_name         => 'Digest::MD5::Reverse',
     license             => 'perl',
-    dist_author         => 'Raoul-Gabriel Urma <blwood@skynet.be>',
-    dis_abstract => 'MD5 Reverse Lookup',
+    dist_author         => 'Urma Raoul-Gabriel <blwood@skynet.be>',
+    dist_abstract       => 'MD5 Reverse Lookup',
     dist_version_from   => 'lib/Digest/MD5/Reverse.pm',
     build_requires => {
         'Test::More' => 0,
