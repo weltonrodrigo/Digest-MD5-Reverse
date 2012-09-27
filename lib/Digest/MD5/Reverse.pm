@@ -2,8 +2,8 @@ package Digest::MD5::Reverse;
 
 use warnings;
 use strict;
-use Socket;
 use Exporter;
+use LWP;
 
 =head1 NAME
 
@@ -14,6 +14,11 @@ Digest::MD5::Reverse - MD5 Reverse Lookup
 our $VERSION = "1.3";
 our @ISA = qw(Exporter);
 our @EXPORT = qw(&reverse_md5);
+our $UA = new LWP::UserAgent(timeout => 20);
+
+# Get proxy settings from environment variables.
+$UA->env_proxy;
+
 
 
 =head1 VERSION
@@ -167,20 +172,27 @@ our $DATABASE = [
 my $get = sub
 {
 	my($url,$path) = @_;
-	socket(my $socket, PF_INET, SOCK_STREAM, getprotobyname("tcp")) or die "Socket Error : $!\n";
-	connect($socket,sockaddr_in(80, inet_aton($url))) or die "Connect Error: $!\n";
-	send($socket,"GET $path HTTP/1.1\015\012Host: $url\015\012User-Agent: Firefox\015\012Connection: Close\015\012\015\012",0);
-	return do { local $/; <$socket> };
+
+  my $res = $UA->get( "http://" . $url . $path );
+
+  if ($res->is_success){
+    return $res->decoded_content;
+  }else{
+    return;
+  }
 };
 
 my $post = sub
 {
 	my($url,$path,$content) = @_;
-	my $len = length $content;
-	socket(my $socket, PF_INET, SOCK_STREAM, getprotobyname("tcp")) or die "Socket Error : $!\n";
-	connect($socket,sockaddr_in(80, inet_aton($url))) or die "Connect Error : $!\n";
-	send($socket,"POST $path HTTP/1.1\015\012Host: $url\015\012User-Agent: Firefox\015\012Content-Type: application/x-www-form-urlencoded\015\012Connection: Close\015\012Content-Length: $len\015\012\015\012$content\015\012",0);
-	return do { local $/; <$socket> };
+
+  my $res = $UA->post( "http://" . $url . $path, Content => $content);
+
+  if ($res->is_success){
+    return $res->decoded_content;
+  }else{
+    return;
+  }
 };
 
 my $reverseit = sub  
