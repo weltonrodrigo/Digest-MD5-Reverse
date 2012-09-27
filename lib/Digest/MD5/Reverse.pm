@@ -47,121 +47,35 @@ source of a MD5 sum.
 
 =over 4
 
-=item * milw0rm.com
-
-=item * gdataonline.com
-
-=item * hashreverse.com
-
-=item * us.md5.crysm.net
-
-=item * nz.md5.crysm.net
-
-=item * ice.breaker.free.fr
-
-=item * hashchecker.com
-
 =item * md5.rednoize.com
 
-=item * md5.xpzone.de
+=item * md5.gromweb.com
 
-=item * md5encryption.com
+=item * tools.benramsey.com
 
 =back
 
 =cut
 
 our $DATABASE = [
-	{
-		host => "milw0rm.com",
-		path => "/cracker/search.php",
-		meth => "POST",
-		content => "hash=%value%&Submit=Submit",
-		mreg => qr{
-		<TR\sclass="submit">
-                <TD\salign="middle"\snowrap="nowrap"\swidth=90>md5<\/TD>
-                <TD\salign="middle"\snowrap="nowrap"\swidth=250>\w{32}<\/TD>
-                <TD\salign="middle"\snowrap="nowrap"\swidth=90>(.+?)<\/TD>
-                <TD\salign="middle"\snowrap="nowrap"\swidth=90>cracked<\/TD>
-		<\/TR>
-                }x
-	}, 
-	{
-        host => "gdataonline.com",
-        path => "/qkhash.php?mode=xml&hash=%value%",
-        meth => "GET",
-        mreg => qr{
-		<result>(.+?)<\/result>
-                  }x
-    },
-	{
-		host => "hashreverse.com",
-		path => "/index.php?action=view",
-		meth => "POST",
-		content => "hash=%value%&Submit2=Search+for+a+SHA1+or+MD5+hash",
-		mreg => qr{
-		<li>(.+?)<\/li>
-                  }x
-	},
-	{
-		host => "us.md5.crysm.net",
-		path => "/find?md5=%value%",
-		meth => "GET",
-		mreg => qr{
-		<li>(.+?)<\/li>
-                  }x        
-	},
-	{
-		host => "nz.md5.crysm.net",
-		path => "/find?md5=%value%",
-		meth => "GET",
-		mreg => qr{
-		<li>(.+?)<\/li>
-                  }x        
-	},
-	{
-		host => "ice.breaker.free.fr",
-		path => "/md5.php?hash=%value%",
-		meth => "GET",
-		mreg => qr{
-		<br>\s-\s(.+?)<br>
-                  }x        
-	},
-    {
-        host => "hashchecker.com",
-        path => "/index.php",
-        meth => "POST",
-        content => "search_field=%value%&Submit=search",
-        mreg => qr{
-		<b>(.+?)<\/b>\sused\scharlist
-                  }x        
-    },
-    {
+  {
         host => "md5.rednoize.com",
-        path => "/?s=md5&q=%value%",
+        path => "/?q=%value%&xml",
         meth => "GET",
-        mreg => qr{
-		<div\sid="result"\s>(.+?)<\/div>
-                  }x
-		
-	},
+        mreg => qr{<ResultString>(.+?)</ResultString>}x
+  },
 	{
-        host => "md5.xpzone.de",
-        path => "/?string=%value%&mode=decrypt",
+        host => "md5.gromweb.com",
+        path => "/query/%value%",
         meth => "GET",
-        mreg => qr{
-		Code:\s<b>(.+?)</b><br>
-                  }x
-    },
-	{
-        host => "md5encryption.com",
-        path => "/?mod=decrypt",
-        meth => "POST",
-		content => "hash2word=%value%",
-        mreg => qr{
-		<b>Decrypted\sWord:<\/b>\s(.*?)(?:<br\s\/>){2}
-                  }x   
-    }
+        mreg => qr{(.+)}x
+  },
+  {
+        host => "tools.benramsey.com",
+        path => "/md5/md5.php?hash=%value%",
+        meth => "GET",
+        mreg => qr{<string><!\[CDATA\[(.+?)]]></string>}x
+  }
 ];
 
 my $get = sub
