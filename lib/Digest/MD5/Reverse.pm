@@ -14,6 +14,8 @@ Digest::MD5::Reverse - MD5 Reverse Lookup
 our $VERSION = "1.3";
 our @ISA = qw(Exporter);
 our @EXPORT = qw(&reverse_md5);
+our @EXPORT_OK = qw(&reverse_md5_base64);
+
 our $UA = new LWP::UserAgent(timeout => 20);
 
 # Get proxy settings from environment variables.
@@ -47,6 +49,20 @@ source of a MD5 sum.
     use Digest::MD5::Reverse;
     print "Data is ".reverse_md5("acbd18db4cc2f85cedef654fccc4a4d8")."\n";    
     # Data is foo
+
+=over
+
+=item Base64
+
+Alternatively, this module can try to reverse a MD5 hash encoded as base64.
+For this to happen, you must have L<MIME::Base64> installed.
+
+  use Digest::MD5::Reverse 'reverse_md5_base64';
+
+  print "Data is " . reverse_md5_base64('ISMvKXpXpadDiUoOSoAfww') . "\n";
+  # Data is admin
+
+=back
 
 =head1 DATABASE
 
@@ -141,6 +157,17 @@ my $reverseit = sub
 sub reverse_md5
 {
 	return $reverseit->(shift);	
+}
+
+sub reverse_md5_base64{
+  my $base64 = shift;
+
+  eval {require MIME::Base64 };
+  die "Could not found module MIME::Base64\n$@" if $@;
+
+  my $hex = unpack ('H*', MIME::Base64::decode_base64($base64));
+
+	return $reverseit->($hex);
 }
 
 =head1 SEE ALSO

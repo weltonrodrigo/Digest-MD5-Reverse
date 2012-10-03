@@ -5,6 +5,7 @@ META.yml # Will be created by "make dist"
 README
 lib/Digest/MD5/Reverse.pm
 t/00-load.t
+t/base64.t
 t/boilerplate.t
 t/pod-coverage.t
 t/pod.t
