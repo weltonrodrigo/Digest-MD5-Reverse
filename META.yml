@@ -9,6 +9,8 @@ resources:
   license: http://dev.perl.org/licenses/
 build_requires:
   Test::More: 0
+requires:
+  LWP::UserAgent: 0
 provides:
   Digest::MD5::Reverse:
     file: lib/Digest/MD5/Reverse.pm
